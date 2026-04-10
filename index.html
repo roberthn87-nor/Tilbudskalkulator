@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tilbuds Kalkulator</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f2f2f2;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px #00000020;
+    }
+    h1 { text-align: center; }
+    h3 { margin-top: 20px; }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+      color: #444;
+    }
+    input::placeholder { color: #777; }
+
+    select {
+      background: #eef3ff;
+      box-shadow: 0 2px 5px #00000015;
+      border: none;
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .knapp-gruppe {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .preset-btn, .toggle-btn {
+      flex: 1;
+      background: #eef3ff;
+      border: none;
+      box-shadow: 0 2px 5px #00000020;
+      padding: 10px 21px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .preset-btn:hover, .toggle-btn:hover { background: #e0e8ff; }
+
+    .toggle-btn.active {
+      background: #cfe0ff;
+      box-shadow: inset 0 0 0 2px #5b7cfa;
+      font-weight: bold;
+    }
+
+    .check-circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #5b7cfa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+    }
+    .toggle-btn.active .check-circle {
+      background: #5b7cfa;
+    }
+    .toggle-btn.active .check-circle::before {
+      content: "✓";
+    }
+
+    .tillegg {
+      display: none;
+      background: #f7f9ff;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+    }
+    .tillegg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .tillegg-title {
+      grid-column: 1 / -1;
+      font-weight: bold;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .result {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px #00000015;
+    }
+    .result.positive { background: #e6f7ea; }
+    .result.negative { background: #fbe9e9; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Tilbuds Kalkulator</h1>
+
+  <h3>Nåværende leverandør</h3>
+  <select id="kdrop">
+    <option value="">Velg konkurrent</option>
+  </select>
+  <input id="paslagA" placeholder="Påslag (øre/kWh)">
+  <input id="fastA" placeholder="Fastbeløp (kr/mnd)">
+
+  <div class="row">
+    <div class="knapp-gruppe">
+      <button class="preset-btn" data-prosent="0.33">33 %</button>
+      <button class="preset-btn" data-prosent="0.50">50 %</button>
+      <button class="preset-btn" data-prosent="0.66">66 %</button>
+    </div>
+    <button id="toggleTillegg" class="toggle-btn">Tilleggstjenester konkurrent</button>
+  </div>
+
+  <div id="tilleggBox" class="tillegg">
+    <div class="tillegg-grid">
+      <div class="tillegg-title">Fastbeløp pr tilleggstjeneste</div>
+      <input id="tf1" placeholder="Fastbeløp 1">
+      <input id="tf2" placeholder="Fastbeløp 2">
+      <input id="tf3" placeholder="Fastbeløp 3">
+      <input id="tf4" placeholder="Fastbeløp 4">
+
+      <div class="tillegg-title">Påslag pr tilleggstjeneste</div>
+      <input id="tp1" placeholder="Påslag 1">
+      <input id="tp2" placeholder="Påslag 2">
+    </div>
+  </div>
+
+  <h3>Vårt tilbud</h3>
+  <input id="paslagB" placeholder="Påslag (øre/kWh)">
+  <input id="fastB" placeholder="Fastbeløp (kr/mnd)">
+
+  <div class="row">
+    <button id="fornybar" class="toggle-btn">
+      <span class="check-circle"></span>
+      <span>Fornybar</span>
+    </button>
+    <select id="minBedrift"></select>
+  </div>
+
+  <h3>Forbruk</h3>
+  <input id="forbruk" placeholder="Årlig forbruk (kWh)">
+  <input id="malere" placeholder="Antall målere">
+
+  <div id="result" class="result"></div>
+</div>
+
+<script>
+const konkurrenter = {
+  "Fortum": {p:6.3, f:59},
+  "Ishavskraft": {p:6.0, f:49},
+  "Å Strøm / Entelios": {p:6.9, f:49},
+  "Agva": {p:14.9, f:39.2},
+  "Lyse": {p:6.44, f:69},
+  "NTE": {p:6.2, f:52},
+  "Kraftriket": {p:6.03, f:59},
+  "Wattn": {p:5.8, f:49},
+  "Ustekveikja": {p:2.74, f:49},
+  "Haugaland": {p:2.9, f:31.2},
+  "Strøyma": {p:6.5, f:99},
+  "Helgeland": {p:3.9, f:39},
+  "Polar kraft": {p:4.9, f:79},
+  "Telemark kraft": {p:2.5, f:39},
+  "Smart Energi": {p:6.99, f:59},
+  "Noova": {p:3.94, f:0},
+  "Hardanger Energi": {p:3.92, f:31.2}
+};
+
+const minBedriftList = [
+  ["Min Bedrift +", 0],
+  ["29 kr/mnd", 29],
+  ["39 kr/mnd", 39],
+  ["49 kr/mnd", 49],
+  ["59 kr/mnd", 59],
+  ["79 kr/mnd", 79],
+  ["99 kr/mnd", 99],
+  ["119 kr/mnd", 119],
+  ["Virke – 48 kr/mnd", 48],
+  ["Tobb – 57 kr/mnd", 57]
+];
+
+const f = v => Number((v || '').replace(',', '.')) || 0;
+
+let fornybarAktiv = false;
+let tilleggApen = false;
+
+Object.keys(konkurrenter).forEach(k => {
+  const o = document.createElement('option');
+  o.value = k;
+  o.textContent = k;
+  kdrop.appendChild(o);
+});
+
+minBedriftList.forEach(([t,v]) => {
+  const o = document.createElement('option');
+  o.value = v;
+  o.textContent = t;
+  minBedrift.appendChild(o);
+});
+
+kdrop.onchange = e => {
+  const k = konkurrenter[e.target.value];
+  if (k) {
+    paslagA.value = k.p;
+    fastA.value = k.f;
+    beregn();
+  }
+};
+
+document.querySelectorAll('.preset-btn').forEach(b =>
+  b.onclick = () => {
+    const r = Number(b.dataset.prosent);
+    paslagB.value = (f(paslagA.value) * (1 - r)).toFixed(2);
+    fastB.value = (f(fastA.value) * (1 - r)).toFixed(2);
+    beregn();
+  }
+);
+
+fornybar.onclick = () => {
+  fornybarAktiv = !fornybarAktiv;
+  fornybar.classList.toggle('active', fornybarAktiv);
+  beregn();
+};
+
+toggleTillegg.onclick = () => {
+  tilleggApen = !tilleggApen;
+  toggleTillegg.classList.toggle('active', tilleggApen);
+  tilleggBox.style.display = tilleggApen ? 'block' : 'none';
+};
+
+document.querySelectorAll('input, select').forEach(e =>
+  e.addEventListener('input', beregn)
+);
+
+function beregn() {
+  const F = f(forbruk.value);
+  const M = f(malere.value);
+  if (!F || !M) return;
+
+  const pasN = f(paslagA.value) + f(tp1.value) + f(tp2.value);
+  const fastN = f(fastA.value) + f(tf1.value) + f(tf2.value) + f(tf3.value) + f(tf4.value);
+
+  const pasVbase = f(paslagB.value);
+  const pasV = pasVbase + (fornybarAktiv ? 3.01 : 0);
+  const fastV = f(fastB.value) + Number(minBedrift.value || 0);
+
+  const kostN = (pasN / 100) * F + fastN * 12 * M;
+  const kostV = (pasV / 100) * F + fastV * 12 * M;
+
+  const diff = kostN - kostV;
+  const prosent = (diff / kostN) * 100;
+  const maned = diff / 12;
+
+  const funnel = pasVbase - 1.34;
+
+  result.style.display = 'block';
+  result.className = 'result ' + (diff >= 0 ? 'positive' : 'negative');
+
+  result.innerHTML = `
+    <p><b>Kostnad nåværende:</b> ${kostN.toFixed(2)} kr</p>
+    <p><b>Kostnad tilbud:</b> ${kostV.toFixed(2)} kr</p>
+    <p><b>Årlig besparelse:</b> ${diff.toFixed(2)} kr (${prosent.toFixed(1)} %)</p>
+    <p><b>Månedlig besparelse:</b> ${maned.toFixed(2)} kr (${prosent.toFixed(1)} %)</p>
+    <p><b>Påslag i Funnel:</b> ${funnel.toFixed(2)} øre/kWh</p>
+  `;
+}
+</script>
+</body>
+</html>
+``
